@@ -1,68 +1,81 @@
-##########################################################################################
+#!/system/bin/sh
+
 #
-# MMT Extended Config Script
+# Universal GMS Doze by the
+# Open Source loving 'GL-DP' and all contributors;
+# Prevent unnecessary GMS wakelocks running in the background, 
+# optimized & adjusted for better day to day battery life
+# with additional modified services
 #
-##########################################################################################
 
-##########################################################################################
-# Config Flags
-##########################################################################################
+# Check minimum API requirements
+sleep 1
+	ui_print "- Checking API version..." 
+sleep 1
+if [ $API -ge 23 ]; then
+	ui_print "  - Reached minimum API requirements"
+sleep 1
+	ui_print "  - Continue installation"
+break
+else
+	ui_print "   - Does not reached minimum API requirements"
+sleep 1
+	abort 	 "   - Aborting"
+fi
 
-# Uncomment and change 'MINAPI' and 'MAXAPI' to the minimum and maximum android version for your mod
-# Uncomment DYNLIB if you want libs installed to vendor for oreo+ and system for anything older
-# Uncomment DEBUG if you want full debug logs (saved to /sdcard)
-MINAPI=23
-#MAXAPI=25
-#DYNLIB=true
-#DEBUG=true
+# Patch the XML and placed the modified one to the original directory
+sleep 1
+	ui_print "- Patching needed files..."
+list=$(xml=$(find /system /vendor -iname "*.xml");for i in $xml; do if grep -q 'allow-in-power-save package="com.google.android.gms"' /sbin/.magisk/mirror$i 2>/dev/null; then echo "$i";fi; done)
+for i in $list
+do
+	mkdir -p `dirname $MODPATH$i`
+sleep 1
+	ui_print "  - Searching in: $i"
+sleep 1
+	ui_print "  - Files found and patched"
+	cp -af /sbin/.magisk/mirror$i $MODPATH$i
+	sed -i '/allow-in-power-save package="com.google.android.gms"/d;/allow-in-data-usage-save package="com.google.android.gms"/d;/allow-in-power-save package="com.google.android.ims"/d;/allow-in-power-save package="com.google.android.apps.turbo"/d' $MODPATH$i
+done
+mv -f $MODPATH/vendor $MODPATH/system/vendor
 
-##########################################################################################
-# Replace list
-##########################################################################################
+# A necessary add-on file which contains carefully, well-known modified services
+sleep 1
+	ui_print "- Inflating add-on"
+echo "#!/system/bin/sh
 
-# List all directories you want to directly replace in the system
-# Check the documentations for more info why you would need this
+#
+# Universal GMS Doze by the
+# Open Source loving 'GL-DP' and all contributors;
+# Prevent unnecessary GMS wakelocks running in the background, 
+# optimized & adjusted for better day to day battery life
+# with additional modified services
+#
 
-# Construct your list in the following format
-# This is an example
-REPLACE_EXAMPLE="
-/system/app/Youtube
-/system/priv-app/SystemUI
-/system/priv-app/Settings
-/system/framework
-"
+if [ ! -d /data/adb/modules/UniversalGMSDoze ]; then
+	rm -rf /data/adb/service.d/23-gldp.sh
+fi
 
-# Construct your own list here
-REPLACE="
-"
+# Sleep before the script executed (in seconds)
+sleep 60
 
-##########################################################################################
-# Permissions
-##########################################################################################
+# Disable collective Device administrators
+pm disable com.google.android.gms/com.google.android.gms.auth.managed.admin.DeviceAdminReceiver
+pm disable com.google.android.gms/com.google.android.gms.mdm.receivers.MdmDeviceAdminReceiver
 
-set_permissions() {
-  : # Remove this if adding to this function
+# Executing...
+# Done
+" > /data/adb/service.d/23-gldp.sh
+chmod +x /data/adb/service.d/23-gldp.sh
 
-  # Note that all files/folders in magisk module directory have the $MODPATH prefix - keep this prefix on all of your files/folders
-  # Some examples:
-  
-  # For directories (includes files in them):
-  # set_perm_recursive  <dirname>                <owner> <group> <dirpermission> <filepermission> <contexts> (default: u:object_r:system_file:s0)
-  
-  # set_perm_recursive $MODPATH/system/lib 0 0 0755 0644
-  # set_perm_recursive $MODPATH/system/vendor/lib/soundfx 0 0 0755 0644
-
-  # For files (not in directories taken care of above)
-  # set_perm  <filename>                         <owner> <group> <permission> <contexts> (default: u:object_r:system_file:s0)
-  
-  # set_perm $MODPATH/system/lib/libart.so 0 0 0644
-  # set_perm /data/local/tmp/file.txt 0 0 644
+# Clean up
+sleep 1
+	ui_print "- Cleaning up"
+clean_up() {
+	rm -rf $MODPATH/LICENSE
 }
+clean_up
 
-##########################################################################################
-# MMT Extended Logic - Don't modify anything after this
-##########################################################################################
-
-SKIPUNZIP=1
-unzip -qjo "$ZIPFILE" 'common/functions.sh' -d $TMPDIR >&2
-. $TMPDIR/functions.sh
+# Executing...
+# Done
+sleep 1
